@@ -1,0 +1,23 @@
+MATRIX IT SOLUTION — Always use this URL after starting the app:
+
+  http://localhost:3000/login
+
+HOW TO START (pick one):
+
+  1. Double-click:  START-APP.bat
+  2. In terminal:   npm run dev
+
+IMPORTANT:
+  - Keep the terminal window OPEN while you use the app.
+  - Wait until you see "Ready" before opening the browser.
+  - First open may take 30-60 seconds (compiling).
+
+DEMO LOGIN — School code: 001  |  Password: 1234
+  director@001.edu
+  admin@001.edu
+  hr@001.edu
+  teacher@001.edu
+  student@001.edu
+
+SUPER ADMIN — School code: ROOT  |  Password: 227387
+  yeabsra45@gmail.com

@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/master-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model School {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  dbPath    String
+  isActive  Boolean  @default(true)
+  budgetEnabled Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model SuperAdmin {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  failedAttempts Int       @default(0)
+  blockedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model GlobalUserBlock {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String?
+  blockedAt DateTime @default(now())
+}
+
+model RoleRequest {
+  id           String   @id @default(cuid())
+  schoolCode   String
+  requestedBy  String
+  roleName     String
+  userEmail    String
+  fullName     String
+  status       String   @default("PENDING")
+  reviewedBy   String?
+  reviewNote   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([schoolCode, status])
+  @@index([status])
+}
+
+model LoginLog {
+  id         String   @id @default(cuid())
+  email      String
+  schoolCode String?
+  success    Boolean
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorEmail String
+  actorRole  String
+  schoolCode String?
+  action     String
+  entity     String?
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([schoolCode, createdAt])
+  @@index([actorEmail])
+  @@index([createdAt])
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  schoolCode String?
+  targetRole String?
+  targetEmail String?
+  title      String
+  message    String
+  type       String   @default("SYSTEM")
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([schoolCode, targetRole, read])
+  @@index([targetEmail, read])
+  @@index([createdAt])
+}
+
+model BackupLog {
+  id        String   @id @default(cuid())
+  filePath  String
+  sizeBytes Int
+  status    String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model HomepageTemplate {
+  id                     String   @id @default("default")
+  minTitleLength         Int      @default(3)
+  minMessageLength       Int      @default(10)
+  defaultThemeColor      String   @default("#2563eb")
+  defaultBackgroundStyle String   @default("gradient")
+  requiredFields         String   @default("title,message,welcome,contact,announcement")
+  structureNote          String   @default("Schools must keep logo, welcome, announcements, and contact sections.")
+  updatedAt              DateTime @updatedAt
+}

@@ -1,0 +1,43 @@
+{
+  "name": "matrix-it-solution-erp",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx scripts/start-app.ts",
+    "dev:next": "next dev -p 3000",
+    "ensure": "tsx scripts/ensure-ready.ts",
+    "build": "prisma generate --schema=prisma/master/schema.prisma && prisma generate --schema=prisma/school/schema.prisma && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate --schema=prisma/master/schema.prisma && prisma generate --schema=prisma/school/schema.prisma",
+    "db:push": "prisma db push --schema=prisma/master/schema.prisma",
+    "seed": "tsx scripts/seed.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "test:login": "tsx scripts/test-login.ts",
+    "backup": "tsx scripts/backup.ts",
+    "setup": "npm run db:push && npm run seed"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.8.2",
+    "bcryptjs": "^3.0.2",
+    "jose": "^6.0.11",
+    "jspdf": "^3.0.1",
+    "next": "^15.3.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.42"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.8",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.6",
+    "@types/react-dom": "^19.1.5",
+    "eslint": "^9.27.0",
+    "eslint-config-next": "^15.3.3",
+    "prisma": "^6.8.2",
+    "tailwindcss": "^4.1.8",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,506 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/school-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("SCHOOL_DB_URL")
+}
+
+enum UserRole {
+  DIRECTOR
+  SCHOOL_ADMIN
+  HR
+  SCHOOL_ASSISTANT
+  STORE_MANAGER
+  PURCHASER
+  TEACHER
+  ACCOUNTANT
+  LIBRARIAN
+  RECEPTIONIST
+  SECURITY
+  NURSE
+  STAFF
+  IT_SUPPORT
+  TRANSPORT_OFFICER
+  CLEANER
+  PARENT
+  STUDENT
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  fullName       String
+  role           UserRole
+  failedAttempts Int       @default(0)
+  blockedAt      DateTime?
+  mustChangePwd  Boolean   @default(true)
+  createdById      String?
+  createdByEmail String?
+  updatedById      String?
+  updatedByEmail String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  teacherProfile          TeacherProfile?
+  studentProfile          StudentProfile?
+  parentProfile           ParentProfile?
+  hrExperience            HRExperience?
+  staffProfile            StaffProfile?
+  schoolAssistantProfile  SchoolAssistantProfile?
+  pmsScores            PmsScore[]
+  teacherEvaluations   TeacherEvaluation[] @relation("Evaluator")
+
+  @@index([role])
+  @@index([email])
+}
+
+model StaffProfile {
+  id         String @id @default(cuid())
+  userId     String @unique
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department String?
+  seniority  String @default("JUNIOR")
+}
+
+model TeacherProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assignments ClassAssignment[]
+}
+
+model SchoolAssistantProfile {
+  id                  String  @id @default(cuid())
+  userId              String  @unique
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  canRegisterTeachers Boolean @default(false)
+  canRegisterStudents Boolean @default(true)
+  canLinkParents      Boolean @default(true)
+  canEditGuardian     Boolean @default(true)
+}
+
+model StudentProfile {
+  id        String @id @default(cuid())
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gradeBand String
+  grade     String
+  status    String @default("ACTIVE")
+  guardianName     String?
+  guardianPhone    String?
+  guardianRelation String?
+
+  parentLinks ParentChildLink[]
+  enrollments ClassEnrollment[]
+  marks       MarkRecord[]
+  attendance  AttendanceRecord[]
+  libraryLoans LibraryLoan[]
+}
+
+model ParentProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  children ParentChildLink[]
+}
+
+model ParentChildLink {
+  id        String @id @default(cuid())
+  parentId  String
+  studentId String
+  relation  String @default("Guardian")
+  guardianPhone String?
+  parent    ParentProfile  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, studentId])
+}
+
+model TeacherEvaluation {
+  id              String   @id @default(cuid())
+  teacherUserId   String
+  evaluatorUserId String
+  evaluatorRole   String
+  period          String
+  score           Float
+  maxScore        Float    @default(100)
+  comment         String?
+  createdAt       DateTime @default(now())
+  evaluator       User     @relation("Evaluator", fields: [evaluatorUserId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherUserId, evaluatorUserId, period])
+  @@index([teacherUserId, period])
+  @@index([evaluatorUserId])
+}
+
+model SchoolClass {
+  id        String @id @default(cuid())
+  gradeBand String
+  grade     String
+  section   String @default("A")
+  name      String
+
+  assignments   ClassAssignment[]
+  enrollments   ClassEnrollment[]
+  classSubjects ClassSubject[]
+  attendance    AttendanceRecord[]
+  homework      Homework[]
+
+  @@index([gradeBand, grade])
+}
+
+model ClassEnrollment {
+  id        String @id @default(cuid())
+  classId   String
+  studentId String
+  class     SchoolClass    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId])
+  @@index([studentId])
+}
+
+model ClassAssignment {
+  id        String @id @default(cuid())
+  classId   String
+  teacherId String
+  class     SchoolClass    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, teacherId])
+  @@index([teacherId])
+}
+
+model Subject {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  classSubjects ClassSubject[]
+  marks         MarkRecord[]
+  lessonPlans   LessonPlan[]
+}
+
+model LessonPlan {
+  id            String    @id @default(cuid())
+  teacherUserId String
+  subjectId     String
+  subject       Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  academicYear  String
+  title         String
+  content       String
+  status        String    @default("DRAFT")
+  directorNote  String?
+  submittedAt   DateTime?
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([teacherUserId, subjectId, academicYear])
+  @@index([status])
+  @@index([teacherUserId])
+}
+
+model ClassSubject {
+  id        String @id @default(cuid())
+  classId   String
+  subjectId String
+  class     SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject   Subject     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, subjectId])
+}
+
+model HRExperience {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seniority             String
+  educationLevel        String   @default("")
+  education             String   @default("")
+  experienceLevel       String   @default("Junior")
+  joiningDate           DateTime @default(now())
+  jobHistory            String   @default("")
+  previousSchools       String?
+  totalYearsExperience  String?
+  positionsHeld         String?
+  certifications        String?
+  achievements          String?
+  skills                String?
+  detailedEducation     String?
+  age                   Int?
+  certificateNo         String   @unique
+  hrSignatureName       String?
+  directorSignatureName String?
+  issuedAt              DateTime @default(now())
+
+  @@index([certificateNo])
+  @@index([seniority])
+}
+
+model SchoolSettings {
+  id                 String   @id @default("default")
+  homepageTitle      String   @default("Welcome")
+  homepageMessage    String   @default("School portal homepage")
+  welcomeText        String   @default("")
+  logoUrl            String?
+  phone              String?
+  email              String?
+  announcement       String?
+  themeColor         String   @default("#2563eb")
+  backgroundStyle    String   @default("gradient")
+  logoPosition       String   @default("center")
+  announcementBanner Boolean  @default(true)
+  updatedAt          DateTime @updatedAt
+}
+
+model MarkRecord {
+  id               String  @id @default(cuid())
+  studentId        String
+  subjectId        String
+  period           String
+  assignmentScore  Float   @default(0)
+  examScore        Float   @default(0)
+  finalScore       Float   @default(0)
+  totalScore       Float   @default(0)
+  student          StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject          Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId, period])
+  @@index([studentId])
+}
+
+model AttendanceRecord {
+  id        String   @id @default(cuid())
+  classId   String
+  studentId String
+  date      String
+  status    String
+  recordedBy String
+  createdAt DateTime @default(now())
+  class     SchoolClass    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId, date])
+  @@index([classId, date])
+}
+
+model Homework {
+  id          String   @id @default(cuid())
+  classId     String
+  title       String
+  description String
+  dueDate     DateTime
+  createdBy   String
+  createdAt   DateTime @default(now())
+  class       SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@index([classId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  subject    String
+  body       String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([toUserId, read])
+  @@index([fromUserId])
+}
+
+model StoreOrder {
+  id          String   @id @default(cuid())
+  title       String
+  items       String
+  quantity    Int      @default(1)
+  requestedBy String
+  status      String   @default("PENDING_DIRECTOR")
+  directorNote String?
+  storeNote   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+}
+
+model PurchaseOrder {
+  id          String   @id @default(cuid())
+  title       String
+  items       String
+  amount      Float
+  requestedBy String
+  status      String   @default("PENDING")
+  reviewedBy  String?
+  createdAt   DateTime @default(now())
+
+  @@index([status])
+}
+
+model LibraryBook {
+  id        String   @id @default(cuid())
+  title     String
+  author    String
+  isbn      String?  @unique
+  copies    Int      @default(1)
+  available Int      @default(1)
+  loans     LibraryLoan[]
+}
+
+model LibraryLoan {
+  id         String    @id @default(cuid())
+  bookId     String
+  studentId  String
+  borrowedAt DateTime  @default(now())
+  dueAt      DateTime
+  returnedAt DateTime?
+  book       LibraryBook    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([bookId])
+}
+
+model LeaveRequest {
+  id         String   @id @default(cuid())
+  userId     String
+  startDate  DateTime
+  endDate    DateTime
+  reason     String
+  status     String   @default("PENDING")
+  reviewedBy String?
+  reviewNote String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+model SchoolAsset {
+  id               String    @id @default(cuid())
+  name             String
+  serialNo         String?
+  assignedToUserId String?
+  status           String    @default("AVAILABLE")
+  assignedAt       DateTime?
+  returnedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([status])
+}
+
+model RoleSuggestion {
+  id          String   @id @default(cuid())
+  suggestedBy String
+  roleName    String
+  userEmail   String
+  fullName    String
+  note        String?
+  createdAt   DateTime @default(now())
+}
+
+model LoginLog {
+  id        String   @id @default(cuid())
+  email     String
+  success   Boolean
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorEmail String
+  actorRole  String
+  action     String
+  entity     String?
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorEmail])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  targetRole  String?
+  targetEmail String?
+  title       String
+  message     String
+  type        String   @default("ROLE")
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([targetRole, read])
+  @@index([targetEmail, read])
+}
+
+model PmsScore {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  String
+  score     Float
+  maxScore  Float    @default(100)
+  period    String
+  rank      Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, category, period])
+  @@index([period, score])
+  @@index([category])
+}
+
+model KpiMetric {
+  id        String   @id @default(cuid())
+  name      String
+  roleGroup String   @default("SCHOOL")
+  weight    Float
+  value     Float
+  target    Float
+  period    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, period, roleGroup])
+  @@index([period, roleGroup])
+}
+
+model SchoolBudget {
+  id          String   @id @default(cuid())
+  fiscalYear  String
+  category    String
+  allocated   Float
+  spent       Float    @default(0)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  transactions BudgetTransaction[]
+
+  @@unique([fiscalYear, category])
+  @@index([fiscalYear])
+}
+
+model BudgetTransaction {
+  id        String       @id @default(cuid())
+  budgetId  String
+  budget    SchoolBudget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  amount    Float
+  note      String?
+  createdBy String
+  createdAt DateTime     @default(now())
+
+  @@index([budgetId])
+}
