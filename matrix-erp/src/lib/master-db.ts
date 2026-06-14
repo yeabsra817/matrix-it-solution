@@ -1,19 +1,10 @@
 import { PrismaClient } from "@/lib/prisma-master";
-import path from "path";
-import fs from "fs";
+import { resolveMasterDbUrl, resolveSchoolDbUrl } from "./db-url";
 
 const globalForPrisma = globalThis as unknown as { masterPrisma?: PrismaClient };
 
 export function masterDbUrl(): string {
-  const dir = path.join(process.cwd(), "data");
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  const legacy = path.join(process.cwd(), "prisma", "master", "data", "master.db");
-  const target = path.join(dir, "master.db");
-  if (!fs.existsSync(target) && fs.existsSync(legacy)) {
-    fs.copyFileSync(legacy, target);
-  }
-  const dbPath = target.replace(/\\/g, "/");
-  return `file:${dbPath}`;
+  return resolveMasterDbUrl();
 }
 
 export const masterDb =
@@ -28,13 +19,10 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 export function getSchoolDbPath(code: string): string {
-  const normalized = code.padStart(3, "0");
-  const dir = path.join(process.cwd(), "data", "schools");
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, `${normalized}.db`);
+  const url = resolveSchoolDbUrl(code);
+  return url.replace(/^file:/, "");
 }
 
 export function schoolDbUrl(code: string): string {
-  const dbPath = getSchoolDbPath(code).replace(/\\/g, "/");
-  return `file:${dbPath}`;
+  return resolveSchoolDbUrl(code);
 }

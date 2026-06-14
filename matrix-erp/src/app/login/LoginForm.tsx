@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { APP_NAME, SUPER_ADMIN_SCHOOL_CODE, SYSTEM_CREDIT } from "@/lib/constants";
+import { isSuperAdminSchoolCode } from "@/lib/super-admin-code";
 
 export function LoginForm() {
   const router = useRouter();
@@ -13,9 +14,7 @@ export function LoginForm() {
   const [schoolCode, setSchoolCode] = useState("");
   const [schoolName, setSchoolName] = useState<string | null>(null);
   const [schoolError, setSchoolError] = useState<string | null>(null);
-  const isSuperAdmin =
-    schoolCode.trim().toUpperCase() === SUPER_ADMIN_SCHOOL_CODE ||
-    schoolCode.trim() === "000";
+  const isSuperAdmin = isSuperAdminSchoolCode(schoolCode);
 
   async function validateSchool(code: string) {
     if (!code.trim()) {
@@ -23,13 +22,26 @@ export function LoginForm() {
       setSchoolError(null);
       return false;
     }
+    if (isSuperAdminSchoolCode(code)) {
+      setSchoolName("Global Super Admin");
+      setSchoolError(null);
+      return true;
+    }
     try {
       const res = await fetch(
-        `/api/auth/validate-school?code=${encodeURIComponent(code.trim())}`
+        `/api/auth/validate-school?code=${encodeURIComponent(code.trim())}`,
+        { credentials: "same-origin" }
       );
-      const data = await res.json();
+      let data: { valid?: boolean; name?: string; error?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        setSchoolName(null);
+        setSchoolError("Could not verify school code");
+        return false;
+      }
       if (data.valid) {
-        setSchoolName(data.name);
+        setSchoolName(data.name ?? null);
         setSchoolError(null);
         return true;
       }
@@ -37,6 +49,7 @@ export function LoginForm() {
       setSchoolError(data.error || "Validation Error: School Not Found");
       return false;
     } catch {
+      setSchoolName(null);
       setSchoolError("Could not verify school code");
       return false;
     }
@@ -135,7 +148,7 @@ export function LoginForm() {
             <p className="text-sm text-green-400 mt-1">✓ {schoolName} loaded</p>
           )}
           {schoolError && <p className="text-sm text-red-300 mt-1">{schoolError}</p>}
-          {schoolName && schoolCode && !schoolError && (
+          {schoolName && schoolCode && !schoolError && !isSuperAdmin && (
             <Link
               href={`/school/${schoolCode.padStart(3, "0")}`}
               className="text-sm text-blue-400 mt-2 inline-block hover:underline"

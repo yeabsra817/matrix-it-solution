@@ -1,9 +1,27 @@
 import { NextResponse } from "next/server";
-import { validateSchoolForLogin } from "@/lib/school-auth";
+import { validateSuperAdminSchoolCode, validateSchoolForLogin } from "@/lib/school-auth";
 
 export async function GET(req: Request) {
   try {
     const raw = new URL(req.url).searchParams.get("code")?.trim() || "";
+
+    const superResult = validateSuperAdminSchoolCode(raw);
+    if (superResult?.ok) {
+      return NextResponse.json({
+        success: true,
+        valid: true,
+        message: "School found",
+        code: superResult.code,
+        name: superResult.name,
+      });
+    }
+    if (superResult && !superResult.ok) {
+      return NextResponse.json(
+        { success: false, valid: false, message: superResult.error, error: superResult.error },
+        { status: 404 }
+      );
+    }
+
     const result = await validateSchoolForLogin(raw);
 
     if (!result.ok) {

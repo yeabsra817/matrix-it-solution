@@ -5,3 +5,7 @@ backups
 .env
 *.log
 .DS_Store
+
+# Keep bundled production seed databases
+!prisma/seed/
+!prisma/seed/**

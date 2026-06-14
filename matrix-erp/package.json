@@ -7,6 +7,7 @@
     "dev:next": "next dev -p 3000",
     "ensure": "tsx scripts/ensure-ready.ts",
     "build": "prisma generate --schema=prisma/master/schema.prisma && prisma generate --schema=prisma/school/schema.prisma && next build",
+    "vercel-build": "prisma generate --schema=prisma/master/schema.prisma && prisma generate --schema=prisma/school/schema.prisma && tsx scripts/build-seed-db.ts && next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate --schema=prisma/master/schema.prisma && prisma generate --schema=prisma/school/schema.prisma",

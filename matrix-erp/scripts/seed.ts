@@ -3,17 +3,18 @@ import fs from "fs";
 import { execSync } from "child_process";
 import { PrismaClient as MasterClient } from "../src/lib/prisma-master";
 import { hashPassword } from "../src/lib/password";
-import { masterDbUrl } from "../src/lib/master-db";
+import { resolveMasterDbUrl } from "../src/lib/db-url";
 
 const master = new MasterClient({
-  datasources: { db: { url: masterDbUrl() } },
+  datasources: { db: { url: resolveMasterDbUrl() } },
 });
 
 async function main() {
   fs.mkdirSync(path.join(process.cwd(), "data"), { recursive: true });
+  const dbUrl = process.env.DATABASE_URL || resolveMasterDbUrl();
   execSync("npx prisma db push --schema=prisma/master/schema.prisma --accept-data-loss", {
     stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: masterDbUrl() },
+    env: { ...process.env, DATABASE_URL: dbUrl },
   });
 
   const superPwd = await hashPassword("227387");

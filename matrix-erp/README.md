@@ -49,14 +49,25 @@ Open http://localhost:3000
 
 ## Deploy to Vercel
 
-1. Push repo to GitHub
+1. Push repo to GitHub (root folder must be `matrix-erp`)
 2. Import in Vercel
 3. Set environment variables:
-   - `DATABASE_URL` — use [Turso](https://turso.tech) or Postgres for production (SQLite files are dev-only on serverless)
-   - `SESSION_SECRET`
-   - `BACKUP_CRON_SECRET`
-   - `SCHOOL_DB_URL` — required for Prisma generate
-4. Deploy — daily backup cron calls `/api/system/backup`
+   - `SESSION_SECRET` — long random string (required)
+   - `SUPER_ADMIN_VERIFY_CODE` — Super Admin verification code (default: `227387`)
+   - `DATABASE_URL` — optional for persistent production; use [Turso](https://turso.tech) `libsql://...` for multi-tenant scale. If omitted, bundled seed DBs from `prisma/seed/` are used at build time.
+   - `BACKUP_CRON_SECRET` — for daily backup cron
+4. Deploy — build runs `vercel-build` which bundles `prisma/seed/master.db` with Super Admin credentials.
+
+### Super Admin login (production)
+
+| Field | Value |
+|-------|-------|
+| School code | `ROOT` |
+| Email | `yeabsra45@gmail.com` |
+| Password | `227387` |
+| Verification code | `227387` (or your `SUPER_ADMIN_VERIFY_CODE`) |
+
+School code `ROOT` is verified without a database lookup. Login uses the bundled master database created during the Vercel build.
 
 For local production test: `npm run build && npm start`
 

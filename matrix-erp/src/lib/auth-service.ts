@@ -6,12 +6,12 @@ import {
   MAX_LOGIN_ATTEMPTS,
   ROLE_HOME,
   SCHOOL_HOME_PATH,
-  SUPER_ADMIN_SCHOOL_CODE,
   SUPER_ADMIN_VERIFY_CODE,
   type Role,
 } from "./constants";
 import type { SessionUser } from "./session";
 import { validateSchoolForLogin } from "./school-auth";
+import { isSuperAdminSchoolCode } from "./super-admin-code";
 import {
   findSchoolUserByIdentifier,
   findSuperAdminByIdentifier,
@@ -45,7 +45,7 @@ export async function login(
     return { ok: false, error: "Account blocked globally by Super Admin." };
   }
 
-  if (code === SUPER_ADMIN_SCHOOL_CODE || code === "000") {
+  if (isSuperAdminSchoolCode(code)) {
     if (!verifyCode?.trim() || verifyCode.trim() !== SUPER_ADMIN_VERIFY_CODE) {
       return { ok: false, error: "Super Admin verification code required." };
     }
