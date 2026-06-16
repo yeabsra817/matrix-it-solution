@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { validateSuperAdminSchoolCode, validateSchoolForLogin } from "@/lib/school-auth";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
   try {
     const raw = new URL(req.url).searchParams.get("code")?.trim() || "";

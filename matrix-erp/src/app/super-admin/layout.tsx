@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/DashboardShell";
 import { getSession } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+
 const nav = [
   { href: "/super-admin", label: "Overview" },
   { href: "/super-admin/schools", label: "Schools" },

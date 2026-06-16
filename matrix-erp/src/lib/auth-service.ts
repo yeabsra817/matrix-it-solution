@@ -26,6 +26,20 @@ export async function login(
   password: string,
   verifyCode?: string
 ): Promise<LoginResult> {
+  try {
+    return await loginInternal(schoolCode, identifier, password, verifyCode);
+  } catch (err) {
+    console.error("[auth-service.login]", err);
+    return { ok: false, error: "Invalid credentials." };
+  }
+}
+
+async function loginInternal(
+  schoolCode: string,
+  identifier: string,
+  password: string,
+  verifyCode?: string
+): Promise<LoginResult> {
   const loginId = identifier.trim();
   const normalizedEmail = loginId.toLowerCase();
   const code = schoolCode.trim().toUpperCase();

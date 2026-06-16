@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getPublicSchoolHomepage } from "@/lib/school-homepage";
+import { getDemoHomepage } from "@/lib/demo-homepage";
 import { SchoolHomepageView, roleQuickLinks } from "@/components/SchoolHomepageView";
 import { ROLE_HOME, ROLE_LABELS } from "@/lib/constants";
 import type { Role } from "@/lib/constants";
@@ -41,8 +42,11 @@ export default async function SchoolHomePage() {
   const session = await getSession();
   if (!session?.schoolCode) redirect("/login");
 
-  const data = await getPublicSchoolHomepage(session.schoolCode);
-  if (!data) redirect("/login");
+  const data =
+    (await getPublicSchoolHomepage(session.schoolCode)) ||
+    getDemoHomepage(session.schoolCode);
+
+  if (!data) redirect(ROLE_HOME[session.role as Role]);
 
   const base = roleQuickLinks(session.role as Role);
   const extra = EXTRA_LINKS[session.role as Role] || [];

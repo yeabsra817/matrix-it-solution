@@ -5,9 +5,13 @@ import { getSession } from "@/lib/session";
 import { redirectPath } from "@/lib/auth-service";
 
 export default async function LoginPage() {
-  const session = await getSession();
-  if (session) {
-    redirect(redirectPath(session));
+  try {
+    const session = await getSession();
+    if (session) {
+      redirect(redirectPath(session));
+    }
+  } catch (err) {
+    console.warn("[LoginPage] session check skipped:", err);
   }
 
   return (

@@ -1,4 +1,3 @@
-import { masterDb } from "./master-db";
 import { getSchoolDb } from "./school-db";
 import type { SessionUser } from "./session";
 
@@ -11,17 +10,22 @@ export async function logMasterAudit(params: {
   entityId?: string;
   details?: string;
 }) {
-  await masterDb.auditLog.create({
-    data: {
-      actorEmail: params.actorEmail,
-      actorRole: params.actorRole,
-      schoolCode: params.schoolCode ?? null,
-      action: params.action,
-      entity: params.entity,
-      entityId: params.entityId,
-      details: params.details,
-    },
-  });
+  try {
+    const { getMasterDb } = await import("./master-db");
+    await getMasterDb().auditLog.create({
+      data: {
+        actorEmail: params.actorEmail,
+        actorRole: params.actorRole,
+        schoolCode: params.schoolCode ?? null,
+        action: params.action,
+        entity: params.entity,
+        entityId: params.entityId,
+        details: params.details,
+      },
+    });
+  } catch (err) {
+    console.warn("[logMasterAudit] skipped:", err);
+  }
 }
 
 export async function logSchoolAudit(
@@ -35,8 +39,12 @@ export async function logSchoolAudit(
     details?: string;
   }
 ) {
-  const db = getSchoolDb(schoolCode);
-  await db.auditLog.create({ data: params });
+  try {
+    const db = getSchoolDb(schoolCode);
+    await db.auditLog.create({ data: params });
+  } catch (err) {
+    console.warn("[logSchoolAudit] skipped:", err);
+  }
 }
 
 export async function logFromSession(

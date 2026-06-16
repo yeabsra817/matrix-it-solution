@@ -1,4 +1,4 @@
-import { masterDb } from "./master-db";
+import { getMasterDb } from "./master-db";
 import { getSchoolDb } from "./school-db";
 
 export async function trackLogin(params: {
@@ -9,7 +9,7 @@ export async function trackLogin(params: {
   userAgent?: string;
 }) {
   try {
-    await masterDb.loginLog.create({
+    await getMasterDb().loginLog.create({
       data: {
         email: params.email.toLowerCase(),
         schoolCode: params.schoolCode,

@@ -1,5 +1,6 @@
-import { masterDb } from "./master-db";
 import { getSchoolDb } from "./school-db";
+import { getDemoHomepage } from "./demo-homepage";
+import { safeAsync } from "./safe-db";
 
 export type HomepageBranding = {
   schoolCode: string;
@@ -18,7 +19,8 @@ export type HomepageBranding = {
 };
 
 export async function getHomepageTemplate() {
-  return masterDb.homepageTemplate.upsert({
+  const { getMasterDb } = await import("./master-db");
+  return getMasterDb().homepageTemplate.upsert({
     where: { id: "default" },
     update: {},
     create: {},
@@ -29,34 +31,44 @@ export async function getPublicSchoolHomepage(
   code: string
 ): Promise<HomepageBranding | null> {
   const normalized = code.padStart(3, "0");
-  const school = await masterDb.school.findUnique({
-    where: { code: normalized },
-  });
-  if (!school || !school.isActive) return null;
 
-  const template = await getHomepageTemplate();
-  const db = getSchoolDb(normalized);
-  const settings = await db.schoolSettings.upsert({
-    where: { id: "default" },
-    update: {},
-    create: {},
-  });
+  return safeAsync(
+    async () => {
+      const { getMasterDb } = await import("./master-db");
+      const school = await getMasterDb().school.findUnique({
+        where: { code: normalized },
+      });
+      if (!school || !school.isActive) {
+        return getDemoHomepage(normalized);
+      }
 
-  return {
-    schoolCode: school.code,
-    schoolName: school.name,
-    homepageTitle: settings.homepageTitle || "Welcome",
-    homepageMessage: settings.homepageMessage || school.name,
-    welcomeText: settings.welcomeText || "",
-    logoUrl: settings.logoUrl,
-    phone: settings.phone,
-    email: settings.email,
-    announcement: settings.announcement,
-    themeColor: settings.themeColor || template.defaultThemeColor,
-    backgroundStyle: settings.backgroundStyle || template.defaultBackgroundStyle,
-    logoPosition: settings.logoPosition || "center",
-    announcementBanner: settings.announcementBanner,
-  };
+      const template = await getHomepageTemplate();
+      const db = getSchoolDb(normalized);
+      const settings = await db.schoolSettings.upsert({
+        where: { id: "default" },
+        update: {},
+        create: {},
+      });
+
+      return {
+        schoolCode: school.code,
+        schoolName: school.name,
+        homepageTitle: settings.homepageTitle || "Welcome",
+        homepageMessage: settings.homepageMessage || school.name,
+        welcomeText: settings.welcomeText || "",
+        logoUrl: settings.logoUrl,
+        phone: settings.phone,
+        email: settings.email,
+        announcement: settings.announcement,
+        themeColor: settings.themeColor || template.defaultThemeColor,
+        backgroundStyle: settings.backgroundStyle || template.defaultBackgroundStyle,
+        logoPosition: settings.logoPosition || "center",
+        announcementBanner: settings.announcementBanner,
+      };
+    },
+    getDemoHomepage(normalized),
+    "getPublicSchoolHomepage"
+  );
 }
 
 export function validateHomepageAgainstTemplate(

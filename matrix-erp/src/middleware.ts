@@ -15,7 +15,7 @@ const publicPaths = [
 const passwordExempt = ["/change-password", "/api/auth/change-password", "/api/auth/logout"];
 
 const secret = new TextEncoder().encode(
-  process.env.SESSION_SECRET || "matrix-dev-secret"
+  process.env.SESSION_SECRET || process.env.JWT_SECRET || "matrix-dev-secret"
 );
 
 async function readSession(req: NextRequest) {

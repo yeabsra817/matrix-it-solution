@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { redirectPath } from "@/lib/auth-service";
 
+export const runtime = "nodejs";
+
 export async function GET() {
   try {
     const session = await getSession();

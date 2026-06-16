@@ -13,16 +13,24 @@ export type SessionUser = {
 };
 
 const COOKIE = "matrix_session";
-const secret = new TextEncoder().encode(
-  process.env.SESSION_SECRET || "matrix-dev-secret"
-);
+
+function getSessionSecret(): Uint8Array {
+  const raw =
+    process.env.SESSION_SECRET ||
+    process.env.JWT_SECRET ||
+    (process.env.NODE_ENV === "production" ? "" : "matrix-dev-secret");
+  if (!raw && process.env.NODE_ENV === "production") {
+    console.error("[session] SESSION_SECRET is not set in production.");
+  }
+  return new TextEncoder().encode(raw || "matrix-dev-secret");
+}
 
 export async function createSession(user: SessionUser): Promise<void> {
   const token = await new SignJWT({ ...user })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("12h")
-    .sign(secret);
+    .sign(getSessionSecret());
 
   const jar = await cookies();
   jar.set(COOKIE, token, {
@@ -35,11 +43,11 @@ export async function createSession(user: SessionUser): Promise<void> {
 }
 
 export async function getSession(): Promise<SessionUser | null> {
-  const jar = await cookies();
-  const token = jar.get(COOKIE)?.value;
-  if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const jar = await cookies();
+    const token = jar.get(COOKIE)?.value;
+    if (!token) return null;
+    const { payload } = await jwtVerify(token, getSessionSecret());
     return payload as unknown as SessionUser;
   } catch {
     return null;

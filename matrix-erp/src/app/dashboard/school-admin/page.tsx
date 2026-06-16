@@ -2,10 +2,25 @@ import { UserSyncPanel } from "@/components/UserSyncPanel";
 import { getSchoolDb } from "@/lib/school-db";
 import { getSession } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+
 export default async function SchoolAdminPage() {
   const session = await getSession();
-  const db = getSchoolDb(session!.schoolCode!);
-  const settings = await db.schoolSettings.findUnique({ where: { id: "default" } });
+  if (!session?.schoolCode) {
+    return (
+      <div className="card">
+        <p className="text-slate-400">Please sign in to access school admin.</p>
+      </div>
+    );
+  }
+
+  let settings = null;
+  try {
+    const db = getSchoolDb(session.schoolCode);
+    settings = await db.schoolSettings.findUnique({ where: { id: "default" } });
+  } catch (err) {
+    console.warn("[school-admin] settings load skipped:", err);
+  }
 
   return (
     <div className="space-y-4">
@@ -19,7 +34,7 @@ export default async function SchoolAdminPage() {
       <p className="text-slate-400">
         Manage users and settings inside your school only. Cannot create system-wide roles.
       </p>
-      <UserSyncPanel session={session!} mode="overview" />
+      <UserSyncPanel session={session} mode="overview" />
     </div>
   );
 }

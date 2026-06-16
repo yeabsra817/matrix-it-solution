@@ -1,13 +1,22 @@
 import Link from "next/link";
-import { masterDb } from "@/lib/master-db";
+import { safeAsync } from "@/lib/safe-db";
 
 export default async function SuperAdminHome() {
-  const [schools, pending, blocks, failedLogins] = await Promise.all([
-    masterDb.school.count(),
-    masterDb.roleRequest.count({ where: { status: "PENDING" } }),
-    masterDb.globalUserBlock.count(),
-    masterDb.loginLog.count({ where: { success: false } }),
-  ]);
+  const stats = await safeAsync(
+    async () => {
+      const { getMasterDb } = await import("@/lib/master-db");
+      const db = getMasterDb();
+      const [schools, pending, blocks, failedLogins] = await Promise.all([
+        db.school.count(),
+        db.roleRequest.count({ where: { status: "PENDING" } }),
+        db.globalUserBlock.count(),
+        db.loginLog.count({ where: { success: false } }),
+      ]);
+      return { schools, pending, blocks, failedLogins };
+    },
+    { schools: 1, pending: 0, blocks: 0, failedLogins: 0 },
+    "super-admin-home"
+  );
 
   return (
     <div className="space-y-4">
@@ -18,19 +27,19 @@ export default async function SuperAdminHome() {
       <div className="grid md:grid-cols-4 gap-4">
         <div className="card">
           <p className="text-slate-400">Schools</p>
-          <p className="text-3xl font-bold">{schools}</p>
+          <p className="text-3xl font-bold">{stats.schools}</p>
         </div>
         <div className="card">
           <p className="text-slate-400">Pending Role Requests</p>
-          <p className="text-3xl font-bold">{pending}</p>
+          <p className="text-3xl font-bold">{stats.pending}</p>
         </div>
         <div className="card">
           <p className="text-slate-400">Global Blocks</p>
-          <p className="text-3xl font-bold">{blocks}</p>
+          <p className="text-3xl font-bold">{stats.blocks}</p>
         </div>
         <div className="card">
           <p className="text-slate-400">Failed Logins (all)</p>
-          <p className="text-3xl font-bold">{failedLogins}</p>
+          <p className="text-3xl font-bold">{stats.failedLogins}</p>
         </div>
       </div>
       <Link href="/super-admin/security" className="btn btn-primary inline-flex">
