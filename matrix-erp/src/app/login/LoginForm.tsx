@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { APP_NAME, SUPER_ADMIN_SCHOOL_CODE, SYSTEM_CREDIT } from "@/lib/constants";
 import { isSuperAdminSchoolCode } from "@/lib/super-admin-code";
+import { fetchJsonSafe } from "@/lib/fetch-json";
+import { saveClientSession, getClientSession } from "@/lib/client-session";
+import { redirectForUser } from "@/lib/demo-fallback-auth";
+import type { Role } from "@/lib/constants";
 
 export function LoginForm() {
   const router = useRouter();
@@ -27,32 +31,32 @@ export function LoginForm() {
       setSchoolError(null);
       return true;
     }
-    try {
-      const res = await fetch(
-        `/api/auth/validate-school?code=${encodeURIComponent(code.trim())}`,
-        { credentials: "same-origin" }
-      );
-      let data: { valid?: boolean; name?: string; error?: string } = {};
-      try {
-        data = await res.json();
-      } catch {
-        setSchoolName(null);
-        setSchoolError("Could not verify school code");
-        return false;
-      }
-      if (data.valid) {
-        setSchoolName(data.name ?? null);
-        setSchoolError(null);
-        return true;
-      }
-      setSchoolName(null);
-      setSchoolError(data.error || "Validation Error: School Not Found");
-      return false;
-    } catch {
-      setSchoolName(null);
-      setSchoolError("Could not verify school code");
-      return false;
+    if (/^\d{1,3}$/.test(code.trim())) {
+      setSchoolName(`School ${code.trim().padStart(3, "0")}`);
+      setSchoolError(null);
     }
+
+    const { ok, data } = await fetchJsonSafe<{
+      valid?: boolean;
+      name?: string;
+      error?: string;
+    }>(`/api/auth/validate-school?code=${encodeURIComponent(code.trim())}`);
+
+    if (ok && data.valid) {
+      setSchoolName(data.name ?? null);
+      setSchoolError(null);
+      return true;
+    }
+
+    if (/^\d{1,3}$/.test(code.trim())) {
+      return true;
+    }
+
+    setSchoolName(null);
+    setSchoolError(
+      (data.error as string) || "School code not found. Use 001 for demo or ROOT for Super Admin."
+    );
+    return false;
   }
 
   useEffect(() => {
@@ -61,7 +65,70 @@ export function LoginForm() {
       setSchoolCode(prefill);
       validateSchool(prefill);
     }
-  }, [searchParams]);
+
+    fetchJsonSafe<{ authenticated?: boolean; redirect?: string }>("/api/auth/session").then(
+      ({ ok, data }) => {
+        if (ok && data.authenticated && data.redirect) {
+          router.replace(data.redirect as string);
+        }
+      }
+    );
+
+    const saved = getClientSession();
+    if (saved?.redirect) {
+      fetchJsonSafe<{ authenticated?: boolean }>("/api/auth/session").then(({ ok, data }) => {
+        if (!ok || !data.authenticated) {
+          /* cookie session expired — user can sign in again */
+        }
+      });
+    }
+  }, [searchParams, router]);
+
+  async function tryClientFallbackLogin(
+    code: string,
+    email: string,
+    password: string,
+    verifyCode?: string
+  ): Promise<boolean> {
+    const { attemptDemoFallbackLogin } = await import("@/lib/demo-fallback-auth");
+    const result = attemptDemoFallbackLogin({
+      schoolCode: code,
+      email,
+      password,
+      verifyCode,
+    });
+    if (!result.ok) return false;
+
+    const redirect = redirectForUser(result.user);
+    saveClientSession({
+      email: result.user.email,
+      fullName: result.user.fullName,
+      role: result.user.role,
+      schoolCode: result.user.schoolCode,
+      redirect,
+      savedAt: Date.now(),
+    });
+
+    const res = await fetchJsonSafe<{
+      success?: boolean;
+      redirect?: string;
+      message?: string;
+      error?: string;
+    }>("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ schoolCode: code, email, password, verifyCode }),
+    });
+
+    if (res.ok && res.data.success !== false) {
+      const target = (res.data.redirect as string) || redirect;
+      router.push(target);
+      router.refresh();
+      return true;
+    }
+
+    return false;
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -69,6 +136,9 @@ export function LoginForm() {
     setError("");
     const form = new FormData(e.currentTarget);
     const code = String(form.get("schoolCode") || "");
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "");
+    const verifyCode = String(form.get("verifyCode") || "").trim() || undefined;
 
     const validSchool = await validateSchool(code);
     if (!validSchool) {
@@ -77,48 +147,55 @@ export function LoginForm() {
       return;
     }
 
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          schoolCode: code.trim(),
-          email: String(form.get("email") || "").trim(),
-          password: String(form.get("password") || ""),
-          verifyCode: String(form.get("verifyCode") || "").trim() || undefined,
-        }),
-      });
+    const { ok, status, data } = await fetchJsonSafe<{
+      success?: boolean;
+      message?: string;
+      error?: string;
+      redirect?: string;
+      role?: Role;
+      user?: { email: string; fullName: string; role: Role; schoolCode: string | null };
+    }>("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ schoolCode: code.trim(), email, password, verifyCode }),
+    });
 
-      let data: {
-        success?: boolean;
-        message?: string;
-        error?: string;
-        redirect?: string;
-        data?: { redirect?: string };
-      } = {};
-
-      try {
-        data = await res.json();
-      } catch {
-        setError("Invalid response from server. Please try again.");
-        return;
+    if (ok && data.success !== false) {
+      const target = (data.redirect as string) || "/school-home";
+      if (data.user) {
+        saveClientSession({
+          email: data.user.email,
+          fullName: data.user.fullName,
+          role: data.user.role,
+          schoolCode: data.user.schoolCode,
+          redirect: target,
+          savedAt: Date.now(),
+        });
       }
-
-      if (!res.ok || data.success === false) {
-        setError(data.message || data.error || "Invalid credentials. Please try again.");
-        return;
-      }
-
-      const target = data.redirect || data.data?.redirect || "/school-home";
       router.push(target);
       router.refresh();
-    } catch (err) {
-      console.error("[LoginForm]", err);
-      setError("Unable to connect. Check your connection and try again.");
-    } finally {
       setLoading(false);
+      return;
     }
+
+    if (status === 401) {
+      setError((data.message as string) || (data.error as string) || "Invalid credentials.");
+      setLoading(false);
+      return;
+    }
+
+    const fallbackOk = await tryClientFallbackLogin(code, email, password, verifyCode);
+    if (fallbackOk) {
+      setLoading(false);
+      return;
+    }
+
+    setError(
+      (data.message as string) ||
+        (data.error as string) ||
+        "Sign-in could not be completed. Check school code, email, and password."
+    );
+    setLoading(false);
   }
 
   return (
@@ -195,8 +272,9 @@ export function LoginForm() {
           </div>
         )}
         <p className="text-xs text-slate-500">
-          Demo school 001: director@001.edu, admin@001.edu, hr@001.edu, teacher@001.edu,
-          student@001.edu — password <strong>1234</strong> (change to 6-digit on first login)
+          Demo: school <strong>001</strong> — director@001.edu, hr@001.edu, teacher@001.edu /
+          password <strong>1234</strong>. Super Admin: <strong>ROOT</strong> /
+          yeabsra45@gmail.com / <strong>227387</strong>
         </p>
         <button className="btn btn-primary w-full" disabled={loading}>
           {loading ? "Signing in..." : "Sign In"}

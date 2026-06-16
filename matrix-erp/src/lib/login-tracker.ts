@@ -8,17 +8,23 @@ export async function trackLogin(params: {
   ipAddress?: string;
   userAgent?: string;
 }) {
-  await masterDb.loginLog.create({
-    data: {
-      email: params.email.toLowerCase(),
-      schoolCode: params.schoolCode,
-      success: params.success,
-      ipAddress: params.ipAddress,
-      userAgent: params.userAgent,
-    },
-  });
+  try {
+    await masterDb.loginLog.create({
+      data: {
+        email: params.email.toLowerCase(),
+        schoolCode: params.schoolCode,
+        success: params.success,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+      },
+    });
+  } catch (err) {
+    console.warn("[trackLogin] master log skipped:", err);
+  }
 
-  if (params.schoolCode && params.schoolCode !== "ROOT") {
+  if (!params.schoolCode || params.schoolCode === "ROOT") return;
+
+  try {
     const db = getSchoolDb(params.schoolCode);
     await db.loginLog.create({
       data: {
@@ -28,6 +34,8 @@ export async function trackLogin(params: {
         userAgent: params.userAgent,
       },
     });
+  } catch (err) {
+    console.warn("[trackLogin] school log skipped:", err);
   }
 }
 

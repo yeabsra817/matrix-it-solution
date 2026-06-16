@@ -15,17 +15,30 @@ function toFileUrl(filePath: string): string {
 
 function tryCopy(src: string, dest: string): boolean {
   try {
-    if (fs.existsSync(src) && !fs.existsSync(dest)) {
-      fs.mkdirSync(path.dirname(dest), { recursive: true });
-      fs.copyFileSync(src, dest);
-    }
+    if (!fs.existsSync(src)) return false;
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
     return fs.existsSync(dest);
   } catch {
     return fs.existsSync(dest);
   }
 }
 
-/** Resolve master SQLite URL — works locally and on Vercel serverless. */
+function pickBundledMaster(): string | null {
+  for (const candidate of [BUNDLED_MASTER, LOCAL_MASTER, LEGACY_MASTER]) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+function ensureWritableCopy(bundled: string, tmpPath: string): string {
+  if (!fs.existsSync(tmpPath) || fs.statSync(tmpPath).size < 1024) {
+    tryCopy(bundled, tmpPath);
+  }
+  return fs.existsSync(tmpPath) ? tmpPath : bundled;
+}
+
+/** Resolve master SQLite URL — writable on Vercel via /tmp. */
 export function resolveMasterDbUrl(): string {
   const envUrl = process.env.DATABASE_URL?.trim();
   if (envUrl && (envUrl.startsWith("libsql:") || envUrl.startsWith("postgres"))) {
@@ -35,42 +48,35 @@ export function resolveMasterDbUrl(): string {
     return envUrl;
   }
 
+  const bundled = pickBundledMaster();
+
   if (isServerless()) {
     const tmpDb = path.join("/tmp", "matrix-master.db");
-    if (!fs.existsSync(tmpDb)) {
-      tryCopy(BUNDLED_MASTER, tmpDb) || tryCopy(LOCAL_MASTER, tmpDb);
+    if (bundled) {
+      return toFileUrl(ensureWritableCopy(bundled, tmpDb));
     }
-    if (fs.existsSync(tmpDb)) {
-      return toFileUrl(tmpDb);
-    }
-    if (fs.existsSync(BUNDLED_MASTER)) {
-      return toFileUrl(BUNDLED_MASTER);
-    }
+    return toFileUrl(tmpDb);
   }
 
   const dir = path.join(process.cwd(), "data");
   try {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   } catch {
-    /* read-only FS — use bundled copy */
+    /* read-only FS */
   }
 
   const target = path.join(dir, "master.db");
-  if (!fs.existsSync(target)) {
-    tryCopy(LEGACY_MASTER, target) || tryCopy(BUNDLED_MASTER, target);
+  if (!fs.existsSync(target) && bundled) {
+    tryCopy(bundled, target);
   }
 
-  if (fs.existsSync(target)) {
-    return toFileUrl(target);
-  }
-  if (fs.existsSync(BUNDLED_MASTER)) {
-    return toFileUrl(BUNDLED_MASTER);
-  }
+  if (fs.existsSync(target)) return toFileUrl(target);
+  if (bundled) return toFileUrl(bundled);
 
   return envUrl || toFileUrl(target);
 }
 
-/** Resolve per-school SQLite URL for serverless (read bundled or copy to /tmp). */
+/** Resolve per-school SQLite URL for serverless. */
 export function resolveSchoolDbUrl(schoolCode: string): string {
   const envUrl = process.env.SCHOOL_DB_URL?.trim();
   const normalized = schoolCode.padStart(3, "0");
@@ -81,14 +87,14 @@ export function resolveSchoolDbUrl(schoolCode: string): string {
 
   const bundled = path.join(process.cwd(), "prisma", "seed", "schools", `${normalized}.db`);
   const local = path.join(process.cwd(), "data", "schools", `${normalized}.db`);
+  const source = fs.existsSync(bundled) ? bundled : fs.existsSync(local) ? local : null;
 
   if (isServerless()) {
     const tmpDb = path.join("/tmp", `matrix-school-${normalized}.db`);
-    if (!fs.existsSync(tmpDb)) {
-      tryCopy(bundled, tmpDb) || tryCopy(local, tmpDb);
+    if (source) {
+      return toFileUrl(ensureWritableCopy(source, tmpDb));
     }
-    if (fs.existsSync(tmpDb)) return toFileUrl(tmpDb);
-    if (fs.existsSync(bundled)) return toFileUrl(bundled);
+    return toFileUrl(tmpDb);
   }
 
   if (fs.existsSync(local)) return toFileUrl(local);

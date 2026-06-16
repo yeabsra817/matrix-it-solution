@@ -35,11 +35,13 @@ export async function login(
       where: {
         email: normalizedEmail.includes("@") ? normalizedEmail : `${normalizedEmail}@`,
       },
-    })) ??
+    }).catch(() => null)) ??
     (!normalizedEmail.includes("@")
-      ? await masterDb.globalUserBlock.findFirst({
-          where: { email: { startsWith: `${normalizedEmail}@` } },
-        })
+      ? await masterDb.globalUserBlock
+          .findFirst({
+            where: { email: { startsWith: `${normalizedEmail}@` } },
+          })
+          .catch(() => null)
       : null);
   if (globalBlock) {
     return { ok: false, error: "Account blocked globally by Super Admin." };
@@ -58,13 +60,17 @@ export async function login(
     const valid = await verifyPassword(password, admin.passwordHash);
     if (!valid) {
       const attempts = admin.failedAttempts + 1;
-      await masterDb.superAdmin.update({
-        where: { id: admin.id },
-        data: {
-          failedAttempts: attempts,
-          blockedAt: attempts >= MAX_LOGIN_ATTEMPTS ? new Date() : null,
-        },
-      });
+      try {
+        await masterDb.superAdmin.update({
+          where: { id: admin.id },
+          data: {
+            failedAttempts: attempts,
+            blockedAt: attempts >= MAX_LOGIN_ATTEMPTS ? new Date() : null,
+          },
+        });
+      } catch (err) {
+        console.warn("[login] super admin attempt update skipped:", err);
+      }
       return {
         ok: false,
         error:
@@ -74,10 +80,14 @@ export async function login(
       };
     }
 
-    await masterDb.superAdmin.update({
-      where: { id: admin.id },
-      data: { failedAttempts: 0, blockedAt: null },
-    });
+    try {
+      await masterDb.superAdmin.update({
+        where: { id: admin.id },
+        data: { failedAttempts: 0, blockedAt: null },
+      });
+    } catch (err) {
+      console.warn("[login] super admin reset attempts skipped:", err);
+    }
 
     return {
       ok: true,
@@ -106,13 +116,17 @@ export async function login(
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
     const attempts = user.failedAttempts + 1;
-    await db.user.update({
-      where: { id: user.id },
-      data: {
-        failedAttempts: attempts,
-        blockedAt: attempts >= MAX_LOGIN_ATTEMPTS ? new Date() : null,
-      },
-    });
+    try {
+      await db.user.update({
+        where: { id: user.id },
+        data: {
+          failedAttempts: attempts,
+          blockedAt: attempts >= MAX_LOGIN_ATTEMPTS ? new Date() : null,
+        },
+      });
+    } catch (err) {
+      console.warn("[login] user attempt update skipped:", err);
+    }
     return {
       ok: false,
       error:
@@ -122,10 +136,14 @@ export async function login(
     };
   }
 
-  await db.user.update({
-    where: { id: user.id },
-    data: { failedAttempts: 0, blockedAt: null },
-  });
+  try {
+    await db.user.update({
+      where: { id: user.id },
+      data: { failedAttempts: 0, blockedAt: null },
+    });
+  } catch (err) {
+    console.warn("[login] user reset attempts skipped:", err);
+  }
 
   return {
     ok: true,

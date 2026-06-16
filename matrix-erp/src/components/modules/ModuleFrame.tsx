@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getApiUrl } from "@/lib/api-url";
 
 export function useApi<T>(url: string) {
   const [data, setData] = useState<T | null>(null);
@@ -9,20 +10,27 @@ export function useApi<T>(url: string) {
   const reload = () => {
     setLoading(true);
     setError("");
-    fetch(url, { credentials: "same-origin" })
+    fetch(getApiUrl(url), { credentials: "same-origin" })
       .then(async (r) => {
-        const d = await r.json();
+        let d: Record<string, unknown> = {};
+        try {
+          d = await r.json();
+        } catch {
+          setError("Could not read server response.");
+          setData(null);
+          return;
+        }
         if (!r.ok) {
-          setError(d.error || `Request failed (${r.status})`);
+          setError((d.error as string) || `Request failed (${r.status})`);
           setData(null);
         } else if (d.error) {
-          setError(d.error);
+          setError(d.error as string);
           setData(null);
         } else {
-          setData(d);
+          setData(d as T);
         }
       })
-      .catch(() => setError("Request failed"))
+      .catch(() => setError("Network error. Please try again."))
       .finally(() => setLoading(false));
   };
   useEffect(() => {

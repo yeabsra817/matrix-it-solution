@@ -67,7 +67,16 @@ Open http://localhost:3000
 | Password | `227387` |
 | Verification code | `227387` (or your `SUPER_ADMIN_VERIFY_CODE`) |
 
-School code `ROOT` is verified without a database lookup. Login uses the bundled master database created during the Vercel build.
+### Vercel environment variables (required)
+
+| Variable | Example | Purpose |
+|----------|---------|---------|
+| `SESSION_SECRET` | long random string | JWT session signing |
+| `SUPER_ADMIN_VERIFY_CODE` | `227387` | Super Admin login verification |
+| `NEXT_PUBLIC_API_URL` | *(leave empty)* | Same-origin on Vercel; set only if API is on another domain |
+| `NEXT_PUBLIC_BASE_URL` | `https://your-app.vercel.app` | Optional canonical URL |
+
+Login uses bundled demo databases from `prisma/seed/` when cloud DB is unavailable. Demo fallback credentials are always available for investor demos.
 
 For local production test: `npm run build && npm start`
 

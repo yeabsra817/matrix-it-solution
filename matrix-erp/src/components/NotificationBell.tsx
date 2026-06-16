@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { getApiUrl } from "@/lib/api-url";
+
 const NOTIFICATIONS_API = "/api/notifications";
 const POLL_INTERVAL_MS = 30_000;
 
@@ -13,11 +15,6 @@ type Notification = {
   read: boolean;
   createdAt: string;
 };
-
-function getApiUrl(path: string): string {
-  if (typeof window === "undefined") return path;
-  return new URL(path, window.location.origin).toString();
-}
 
 async function parseJsonSafe(res: Response): Promise<Record<string, unknown>> {
   try {
