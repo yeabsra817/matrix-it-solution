@@ -1,0 +1,23 @@
+{
+  "name": "matrix-banking-kpi",
+  "version": "1.0.0",
+  "description": "Matrix Modern Banking KPI Tracker - Developed by Yeabsra Teffera",
+  "private": true,
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "build:all": "npm run build --prefix backend && npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "vercel-build": "npm run build --prefix frontend",
+    "start:backend": "npm start --prefix backend",
+    "start:frontend": "npm start --prefix frontend",
+    "seed": "npm run seed --prefix backend",
+    "migrate": "npm run db:migrate --prefix backend"
+  }
+}
