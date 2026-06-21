@@ -4,6 +4,12 @@ import { execSync } from "child_process";
 import { PrismaClient as MasterClient } from "../src/lib/prisma-master";
 import { hashPassword } from "../src/lib/password";
 import { resolveMasterDbUrl } from "../src/lib/db-url";
+import {
+  DEFAULT_SUPER_ADMIN_EMAIL,
+  DEFAULT_SUPER_ADMIN_PASSWORD,
+  LEGACY_SUPER_ADMIN_EMAIL,
+  LEGACY_SUPER_ADMIN_PASSWORD,
+} from "../src/lib/super-admin-defaults";
 
 const master = new MasterClient({
   datasources: { db: { url: resolveMasterDbUrl() } },
@@ -17,7 +23,6 @@ async function main() {
     env: { ...process.env, DATABASE_URL: dbUrl },
   });
 
-  const superPwd = await hashPassword("227387");
   await master.homepageTemplate.upsert({
     where: { id: "default" },
     update: {},
@@ -33,20 +38,23 @@ async function main() {
     },
   });
 
-  await master.superAdmin.upsert({
-    where: { email: "yeabsra45@gmail.com" },
-    update: { passwordHash: superPwd, failedAttempts: 0, blockedAt: null },
-    create: {
-      email: "yeabsra45@gmail.com",
-      passwordHash: superPwd,
-    },
-  });
+  const accounts = [
+    { email: DEFAULT_SUPER_ADMIN_EMAIL, password: DEFAULT_SUPER_ADMIN_PASSWORD },
+    { email: LEGACY_SUPER_ADMIN_EMAIL, password: LEGACY_SUPER_ADMIN_PASSWORD },
+  ];
 
-  console.log("Seed complete — Super Admin only.");
-  console.log("Super Admin: yeabsra45@gmail.com / 227387 (school code ROOT)");
-  console.log(
-    "Create schools via Super Admin UI, then SCHOOL_ADMIN/DIRECTOR via hierarchy."
-  );
+  for (const acc of accounts) {
+    const passwordHash = await hashPassword(acc.password);
+    await master.superAdmin.upsert({
+      where: { email: acc.email },
+      update: { passwordHash, failedAttempts: 0, blockedAt: null },
+      create: { email: acc.email, passwordHash },
+    });
+  }
+
+  console.log("Seed complete — Super Admin accounts ready.");
+  console.log(`  ${DEFAULT_SUPER_ADMIN_EMAIL} / ${DEFAULT_SUPER_ADMIN_PASSWORD} (school code ROOT)`);
+  console.log(`  ${LEGACY_SUPER_ADMIN_EMAIL} / ${LEGACY_SUPER_ADMIN_PASSWORD} (school code ROOT)`);
 }
 
 main()

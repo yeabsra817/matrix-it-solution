@@ -29,6 +29,25 @@ function teacherLink(
 export async function getRoleDashboardSync(
   session: SessionUser
 ): Promise<DashboardSyncResult> {
+  try {
+    return await getRoleDashboardSyncInternal(session);
+  } catch (err) {
+    console.warn("[dashboard-sync] fallback empty:", err);
+    return {
+      syncedAt: new Date().toISOString(),
+      scope: "admin",
+      staff: [],
+      students: [],
+      parents: [],
+      teachers: [],
+      counts: { staff: 0, students: 0, parents: 0, teachers: 0 },
+    };
+  }
+}
+
+async function getRoleDashboardSyncInternal(
+  session: SessionUser
+): Promise<DashboardSyncResult> {
   const db = getSchoolDb(session.schoolCode!);
   const syncedAt = new Date().toISOString();
 

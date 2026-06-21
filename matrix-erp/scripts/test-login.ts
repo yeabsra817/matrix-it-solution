@@ -8,10 +8,15 @@ const CASES = [
   { code: "001", email: "student@001.edu", password: "1234", role: "STUDENT" },
   {
     code: "ROOT",
+    email: "admin@matrix.com",
+    password: "Admin123!",
+    role: "SUPER_ADMIN",
+  },
+  {
+    code: "ROOT",
     email: "yeabsra45@gmail.com",
     password: "227387",
     role: "SUPER_ADMIN",
-    verifyCode: "227387",
   },
 ];
 
@@ -19,12 +24,7 @@ async function main() {
   let passed = 0;
   for (const c of CASES) {
     try {
-      const result = await login(
-        c.code,
-        c.email,
-        c.password,
-        "verifyCode" in c ? c.verifyCode : undefined
-      );
+      const result = await login(c.code, c.email, c.password);
       if (result.ok && result.user.role === c.role) {
         console.log(`✓ ${c.email} (${c.role})`);
         passed++;

@@ -257,24 +257,21 @@ export function LoginForm() {
         </div>
         {isSuperAdmin && (
           <div>
-            <label className="label">Verification Code</label>
+            <label className="label">Verification Code (optional)</label>
             <input
               className="input"
               type="password"
               name="verifyCode"
-              placeholder="Super Admin secret code"
+              placeholder="Optional — leave blank for admin@matrix.com"
               autoComplete="one-time-code"
-              required
             />
-            <p className="text-xs text-slate-500 mt-1">
-              Super Admin requires verification in addition to password.
-            </p>
           </div>
         )}
         <p className="text-xs text-slate-500">
-          Demo: school <strong>001</strong> — director@001.edu, hr@001.edu, teacher@001.edu /
-          password <strong>1234</strong>. Super Admin: <strong>ROOT</strong> /
-          yeabsra45@gmail.com / <strong>227387</strong>
+          Super Admin (ROOT): <strong>admin@matrix.com</strong> / <strong>Admin123!</strong>
+          <br />
+          School 001 demo: director@001.edu, hr@001.edu, teacher@001.edu, accountant@001.edu —
+          password <strong>1234</strong>
         </p>
         <button className="btn btn-primary w-full" disabled={loading}>
           {loading ? "Signing in..." : "Sign In"}

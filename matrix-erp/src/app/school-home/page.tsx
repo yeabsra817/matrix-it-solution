@@ -8,6 +8,8 @@ import { ROLE_HOME, ROLE_LABELS } from "@/lib/constants";
 import type { Role } from "@/lib/constants";
 import { SchoolHomepageFooter } from "@/components/SchoolHomepageFooter";
 
+export const dynamic = "force-dynamic";
+
 const EXTRA_LINKS: Partial<Record<Role, { href: string; label: string }[]>> = {
   HR: [
     { href: "/dashboard/hr/staff", label: "All Staff" },

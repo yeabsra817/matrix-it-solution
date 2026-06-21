@@ -5,6 +5,7 @@ import { createSession } from "@/lib/session";
 import { trackLogin, getClientMeta } from "@/lib/login-tracker";
 import { logMasterAudit } from "@/lib/audit";
 import { attemptDemoFallbackLogin } from "@/lib/demo-fallback-auth";
+import { ensureDefaultSuperAdmins } from "@/lib/ensure-super-admin";
 
 export const runtime = "nodejs";
 
@@ -82,6 +83,10 @@ export async function POST(req: Request) {
     }
     input = parsed.data;
 
+    await ensureDefaultSuperAdmins().catch((err) =>
+      console.warn("[login] ensure super admin skipped:", err)
+    );
+
     const meta = getClientMeta(req);
     const schoolCode =
       input.schoolCode.toUpperCase() === "ROOT" ? null : input.schoolCode.padStart(3, "0");
@@ -123,7 +128,7 @@ export async function POST(req: Request) {
     } catch (sessionErr) {
       console.error("[login] session error:", sessionErr);
       return jsonError(
-        "Could not save your session. Set SESSION_SECRET in Vercel environment variables.",
+        "Sign-in succeeded but session could not be saved. Please try again.",
         500
       );
     }

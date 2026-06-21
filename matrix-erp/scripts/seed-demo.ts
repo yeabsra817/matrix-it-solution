@@ -22,6 +22,10 @@ const DEMO_USERS: {
   { email: "admin@001.edu", fullName: "School Admin", role: UserRole.SCHOOL_ADMIN },
   { email: "hr@001.edu", fullName: "HR Manager", role: UserRole.HR },
   { email: "teacher@001.edu", fullName: "Demo Teacher", role: UserRole.TEACHER },
+  { email: "accountant@001.edu", fullName: "Finance Officer", role: UserRole.ACCOUNTANT },
+  { email: "purchaser@001.edu", fullName: "Purchaser", role: UserRole.PURCHASER },
+  { email: "store@001.edu", fullName: "Store Manager", role: UserRole.STORE_MANAGER },
+  { email: "staff@001.edu", fullName: "Academic Staff", role: UserRole.STAFF },
   { email: "student@001.edu", fullName: "Demo Student", role: UserRole.STUDENT },
 ];
 
